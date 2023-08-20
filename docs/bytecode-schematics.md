@@ -20,7 +20,7 @@ Everything is little-endian[^1].
 ## Instructions
 
 | Name          | Hex      | Description                                                                                                                                |
-| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --- | ------------------------------------------------- |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `NOOP`        | `0x0000` | Does nothing. A no-op.                                                                                                                     |
 | `EXTRA_ARG`   | `0x0001` | An extra argument to pass to the preceding instruction.                                                                                    |
 | `LOAD_CONST`  | `0x0002` | Loads the constant specified in the argument to the top of the stack.                                                                      |
@@ -34,7 +34,7 @@ Everything is little-endian[^1].
 | `OP_MULTIPLY` | `0x000a` | Pops and multiples the top two elements of the stack then puts the result.                                                                 |
 | `OP_DIVIDE`   | `0x000b` | Pops and divides the second element of the stack by the first, then puts the result.                                                       |
 | `OP_AND`      | `0x000c` | Implements `TOS = TOS1 && TOS2`, popping the top two elements of the stack.                                                                |
-| `OP_OR`       | `0x000d` | Implements `TOS = TOS1                                                                                                                     |     | TOS2`, popping the top two elements of the stack. |
+| `OP_OR`       | `0x000d` | Implements `TOS = TOS1 \|\| TOS2`, popping the top two elements of the stack.                                                              |
 | `UNARY_NOT`   | `0x000e` | Implements `TOS = !TOS`, coercing the value to a boolean if necessary.                                                                     |
 | `UNARY_ABS`   | `0x000f` | Pops and takes the absolute value of `TOS` and pushes it.                                                                                  |
 | `UNARY_FLOOR` | `0x0010` | Pops and takes the floor of `TOS` and pushes it.                                                                                           |
