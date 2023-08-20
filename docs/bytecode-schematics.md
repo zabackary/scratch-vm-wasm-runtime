@@ -51,15 +51,17 @@ Everything is little-endian[^1].
 | `UNARY_EPOW`  | `0x001b` | Pops and raises _e_ to the power of `TOS` and pushes it.                                                                                   |
 | `UNARY_10POW` | `0x001c` | Pops and takes 10 to the power of `TOS` and pushes it.                                                                                     |
 
-[^2] This should also mark the variable as changed so `scratch-gui` can update
-monitors.
+[^2]:
+    This should also mark the variable as changed so `scratch-gui` can update
+    monitors.
 
-[^3] In degrees, sadly.
+[^3]: In degrees, sadly.
 
 ## Variable schematics
 
 There are three stores passed to the runtime: constants, variables, and lists.
 Constants never change throughout the lifetime of the program.
 
-[^1] If, like me, you often forget which is which, little-endian =
-least-significant first
+[^1]:
+    If, like me, you often forget which is which, little-endian =
+    least-significant first
