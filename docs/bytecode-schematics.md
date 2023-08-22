@@ -5,7 +5,7 @@
 If you're familiar with the CPython bytecode, this may be familiar.
 
 Most instructions are made up of three parts: A two-byte instruction name, a
-three-byte reserved padding (for alignment and extensibility), and a four-byte
+two-byte reserved padding (for alignment and extensibility), and a four-byte
 argument. Extra arguments may be passed via an `EXTRA_ARG` instruction
 immediately following the instruction requiring it.
 
@@ -34,7 +34,7 @@ Bytecode:
 | constant | N/A           | `2` | `1`   |
 | variable | `my variable` | `0` | `0`   |
 | variable | `_$i1`        | `1` | `0`   |
-| list     | `my list`     | `0` | ``    |
+| list     | `my list`     | `0` | ` `   |
 
 ```
 00 LOAD_CONST 0
