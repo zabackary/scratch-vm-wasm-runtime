@@ -105,6 +105,20 @@ impl ops::Div for ScratchValue {
     }
 }
 
+impl ops::BitAnd for ScratchValue {
+    type Output = ScratchValue;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::Boolean(Into::<bool>::into(self) && Into::<bool>::into(rhs))
+    }
+}
+
+impl ops::BitOr for ScratchValue {
+    type Output = ScratchValue;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::Boolean(Into::<bool>::into(self) || Into::<bool>::into(rhs))
+    }
+}
+
 impl TryFrom<JsValue> for ScratchValue {
     type Error = &'static str;
     fn try_from(value: JsValue) -> Result<Self, Self::Error> {

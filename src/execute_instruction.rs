@@ -8,6 +8,11 @@ use crate::{
     scratch_value::ScratchValue,
 };
 
+#[inline]
+fn pop_stack(stack: &mut Vec<ScratchValue>) -> Result<ScratchValue, &'static str> {
+    stack.pop().ok_or("nothing on the stack to pop")
+}
+
 pub fn execute_instruction<F>(
     instruction: &Instruction,
     stack: &mut Vec<ScratchValue>,
@@ -73,27 +78,137 @@ where
             }
             Ok(())
         }
-        InstructionType::OpAdd => todo!(),
-        InstructionType::OpSubtract => todo!(),
-        InstructionType::OpMultiply => todo!(),
-        InstructionType::OpDivide => todo!(),
-        InstructionType::OpAnd => todo!(),
-        InstructionType::OpOr => todo!(),
-        InstructionType::UnaryNot => todo!(),
-        InstructionType::UnaryAbs => todo!(),
-        InstructionType::UnaryFloor => todo!(),
-        InstructionType::UnaryCeil => todo!(),
-        InstructionType::UnarySqrt => todo!(),
-        InstructionType::UnarySin => todo!(),
-        InstructionType::UnaryCos => todo!(),
-        InstructionType::UnaryTan => todo!(),
-        InstructionType::UnaryAsin => todo!(),
-        InstructionType::UnaryAcos => todo!(),
-        InstructionType::UnaryAtan => todo!(),
-        InstructionType::UnaryLn => todo!(),
-        InstructionType::UnaryLog => todo!(),
-        InstructionType::UnaryEPow => todo!(),
-        InstructionType::Unary10Pow => todo!(),
+        InstructionType::OpAdd => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(lhs + rhs);
+            Ok(())
+        }
+        InstructionType::OpSubtract => {
+            let rhs = pop_stack(stack)?;
+            let lhs = pop_stack(stack)?;
+            stack.push(lhs - rhs);
+            Ok(())
+        }
+        InstructionType::OpMultiply => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(lhs * rhs);
+            Ok(())
+        }
+        InstructionType::OpDivide => {
+            let rhs = pop_stack(stack)?;
+            let lhs = pop_stack(stack)?;
+            stack.push(lhs / rhs);
+            Ok(())
+        }
+        InstructionType::OpAnd => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(lhs & rhs);
+            Ok(())
+        }
+        InstructionType::OpOr => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(lhs | rhs);
+            Ok(())
+        }
+        InstructionType::UnaryNot => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Boolean(!Into::<bool>::into(op)));
+            Ok(())
+        }
+        InstructionType::UnaryAbs => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(Into::<f64>::into(op).abs()));
+            Ok(())
+        }
+        InstructionType::UnaryFloor => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(Into::<f64>::into(op).floor()));
+            Ok(())
+        }
+        InstructionType::UnaryCeil => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(Into::<f64>::into(op).ceil()));
+            Ok(())
+        }
+        InstructionType::UnarySqrt => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(Into::<f64>::into(op).sqrt()));
+            Ok(())
+        }
+        InstructionType::UnarySin => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().sin(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryCos => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().cos(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryTan => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().tan(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryAsin => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().asin(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryAcos => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().acos(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryAtan => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().atan(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryLn => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().ln(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryLog => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                Into::<f64>::into(op).to_radians().log10(),
+            ));
+            Ok(())
+        }
+        InstructionType::UnaryEPow => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                std::f64::consts::E.powf(Into::<f64>::into(op).to_radians()),
+            ));
+            Ok(())
+        }
+        InstructionType::Unary10Pow => {
+            let op = pop_stack(stack)?;
+            stack.push(ScratchValue::Number(
+                10.0_f64.powf(Into::<f64>::into(op).to_radians()),
+            ));
+            Ok(())
+        }
         InstructionType::OpLt => todo!(),
         InstructionType::Reserved => todo!(),
         InstructionType::OpEq => todo!(),
