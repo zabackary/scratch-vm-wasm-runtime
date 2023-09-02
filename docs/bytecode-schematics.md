@@ -9,7 +9,7 @@ two-byte reserved padding (for alignment and extensibility), and a four-byte
 argument. Extra arguments may be passed via an `EXTRA_ARG` instruction
 immediately following the instruction requiring it.
 
-Everything is little-endian[^1].
+Everything is little-endian[^1]. TODO: Just use the endianness of the host?
 
 ## Example bytecode
 
