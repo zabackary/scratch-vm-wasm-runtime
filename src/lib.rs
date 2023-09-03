@@ -86,7 +86,8 @@ pub fn run_sync(
     }
     // Execute the program
     let mut program_counter = initial_program_counter;
-    while program_counter < instructions.len() {
+    let mut early_return = false;
+    while !early_return && program_counter < instructions.len() {
         let instruction = &instructions[program_counter];
         execute_instruction(
             instruction,
@@ -115,6 +116,9 @@ pub fn run_sync(
                     _ => None,
                 }
             },
+            &mut || {
+                early_return = true;
+            },
         )?;
         program_counter += 1;
     }
@@ -129,6 +133,10 @@ pub fn run_sync(
             .iter()
             .map(|item| Into::<JsValue>::into(item.clone()))
             .collect::<Array>(),
+    );
+    variables.set(
+        &JsValue::from_str("_programCounter"),
+        &JsValue::from_f64(program_counter as f64),
     );
     Ok(variables)
 }

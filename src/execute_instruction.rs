@@ -13,16 +13,25 @@ fn pop_stack(stack: &mut Vec<ScratchValue>) -> Result<ScratchValue, &'static str
     stack.pop().ok_or("nothing on the stack to pop")
 }
 
-pub fn execute_instruction<F>(
+fn scratch_find(list: &Vec<ScratchValue>, term: &str) -> usize {
+    list.iter()
+        // The call to `clone` may be a bottleneck -- is there any more efficient way?
+        .position(|item| term.eq_ignore_ascii_case(&Into::<String>::into(item.clone())))
+        .map_or(0, |a| a + 1)
+}
+
+pub fn execute_instruction<F, G>(
     instruction: &Instruction,
     stack: &mut Vec<ScratchValue>,
     constant_map: &mut HashMap<u32, ScratchValue>,
     variable_map: &mut HashMap<u32, ScratchValue>,
     list_map: &mut HashMap<u32, Vec<ScratchValue>>,
     jmp_consume_extra_arg: &mut F,
+    return_control: &mut G,
 ) -> Result<(), &'static str>
 where
     F: FnMut(Option<usize>) -> Option<u32>,
+    G: FnMut() -> (),
 {
     match &instruction.name {
         InstructionType::Noop => Ok(()),
@@ -209,22 +218,116 @@ where
             ));
             Ok(())
         }
-        InstructionType::OpLt => todo!(),
+        InstructionType::OpLt => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(ScratchValue::Boolean(
+                Into::<f64>::into(lhs) < Into::<f64>::into(rhs),
+            ));
+            Ok(())
+        }
         InstructionType::Reserved => todo!(),
-        InstructionType::OpEq => todo!(),
-        InstructionType::ListDel => todo!(),
-        InstructionType::ListIns => todo!(),
-        InstructionType::ListDelAll => todo!(),
-        InstructionType::ListReplace => todo!(),
-        InstructionType::ListPush => todo!(),
-        InstructionType::ListLoad => todo!(),
-        InstructionType::ListLen => todo!(),
-        InstructionType::ListIFind => todo!(),
-        InstructionType::ListIIncludes => todo!(),
+        InstructionType::OpEq => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(ScratchValue::Boolean(
+                Into::<f64>::into(lhs) == Into::<f64>::into(rhs),
+            ));
+            Ok(())
+        }
+        InstructionType::ListDel => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
+            if index < list.len() {
+                // If the index is out of bounds, no-op just like Scratch does
+                list.remove(index);
+            }
+            Ok(())
+        }
+        InstructionType::ListIns => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let element = pop_stack(stack)?;
+            let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
+            if index <= list.len() {
+                // If the index is out of bounds, no-op just like Scratch does
+                list.insert(index, element);
+            }
+            Ok(())
+        }
+        InstructionType::ListDelAll => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            list.clear();
+            // TODO: Deallocate vector? How?
+            Ok(())
+        }
+        InstructionType::ListReplace => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let element = pop_stack(stack)?;
+            let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
+            if index < list.len() {
+                // If the index is out of bounds, no-op just like Scratch does
+                list[index] = element;
+            }
+            Ok(())
+        }
+        InstructionType::ListPush => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let element = pop_stack(stack)?;
+            list.push(element);
+            Ok(())
+        }
+        InstructionType::ListLoad => {
+            let list = list_map
+                .get_mut(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
+            stack.push(if index < list.len() {
+                list[index].clone()
+            } else {
+                ScratchValue::EMPTY
+            });
+            Ok(())
+        }
+        InstructionType::ListLen => {
+            let list = list_map
+                .get(&instruction.argument)
+                .ok_or("failed to find list")?;
+            stack.push(ScratchValue::Number(list.len() as f64));
+            Ok(())
+        }
+        InstructionType::ListIFind => {
+            let list = list_map
+                .get(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let term: String = pop_stack(stack)?.into();
+            stack.push(ScratchValue::Number(scratch_find(list, &term) as f64));
+            Ok(())
+        }
+        InstructionType::ListIIncludes => {
+            let list = list_map
+                .get(&instruction.argument)
+                .ok_or("failed to find list")?;
+            let term: String = pop_stack(stack)?.into();
+            stack.push(ScratchValue::Boolean(scratch_find(list, &term) > 0));
+            Ok(())
+        }
         InstructionType::MonitorShowVar => todo!(),
         InstructionType::MonitorHideVar => todo!(),
         InstructionType::MonitorShowList => todo!(),
         InstructionType::MonitorHideList => todo!(),
-        InstructionType::Return => todo!(),
+        InstructionType::Return => {
+            return_control();
+            Ok(())
+        }
     }
 }
