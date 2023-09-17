@@ -59,6 +59,7 @@ pub enum ReturnReason {
     Finished = 0x00000000,
     LoopYield = 0x00000001,
     Repaint = 0x00000002,
+    VisualReport = 0x00000003,
 }
 
 #[wasm_bindgen]
