@@ -53,6 +53,15 @@ pub enum InstructionType {
 }
 
 #[wasm_bindgen]
+#[repr(u32)]
+#[derive(Copy, Clone, Debug)]
+pub enum ReturnReason {
+    Finished = 0x00000000,
+    LoopYield = 0x00000001,
+    Repaint = 0x00000002,
+}
+
+#[wasm_bindgen]
 #[repr(C)]
 pub struct Instruction {
     pub name: InstructionType,

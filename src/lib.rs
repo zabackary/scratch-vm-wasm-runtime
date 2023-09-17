@@ -14,9 +14,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 #[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
+extern "C" {}
 
 #[wasm_bindgen]
 pub fn init() {
@@ -26,7 +24,7 @@ pub fn init() {
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_DECLARATION: &'static str = r#"
-export type VariableStore = Map<string, string | number | boolean>; 
+export type VariableStore = Map<number, string | number | boolean>; 
 "#;
 
 /// For lists, they are passed as strings with the null character as the list
@@ -86,8 +84,8 @@ pub fn run_sync(
     }
     // Execute the program
     let mut program_counter = initial_program_counter;
-    let mut early_return = false;
-    while !early_return && program_counter < instructions.len() {
+    let mut early_return = None;
+    while early_return.is_none() && program_counter < instructions.len() {
         let instruction = &instructions[program_counter];
         execute_instruction(
             instruction,
@@ -116,8 +114,8 @@ pub fn run_sync(
                     _ => None,
                 }
             },
-            &mut || {
-                early_return = true;
+            &mut |argument| {
+                early_return = Some(argument);
             },
         )?;
         program_counter += 1;
@@ -138,5 +136,11 @@ pub fn run_sync(
         &JsValue::from_str("_programCounter"),
         &JsValue::from_f64(program_counter as f64),
     );
+    if let Some(return_argument) = early_return {
+        variables.set(
+            &JsValue::from_str("_returnReason"),
+            &JsValue::from_f64(return_argument as f64),
+        );
+    }
     Ok(variables)
 }

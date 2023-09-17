@@ -31,7 +31,7 @@ pub fn execute_instruction<F, G>(
 ) -> Result<(), &'static str>
 where
     F: FnMut(Option<usize>) -> Option<u32>,
-    G: FnMut() -> (),
+    G: FnMut(u32) -> (),
 {
     match &instruction.name {
         InstructionType::Noop => Ok(()),
@@ -326,7 +326,7 @@ where
         InstructionType::MonitorShowList => todo!(),
         InstructionType::MonitorHideList => todo!(),
         InstructionType::Return => {
-            return_control();
+            return_control(instruction.argument);
             Ok(())
         }
     }
