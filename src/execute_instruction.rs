@@ -23,7 +23,7 @@ fn scratch_find(list: &Vec<ScratchValue>, term: &str) -> usize {
 pub fn execute_instruction<F, G>(
     instruction: &Instruction,
     stack: &mut Vec<ScratchValue>,
-    constant_map: &mut HashMap<u32, ScratchValue>,
+    constant_map: &HashMap<u32, ScratchValue>,
     variable_map: &mut HashMap<u32, ScratchValue>,
     list_map: &mut HashMap<u32, Vec<ScratchValue>>,
     jmp_consume_extra_arg: &mut F,
@@ -329,5 +329,7 @@ where
             return_control(instruction.argument);
             Ok(())
         }
+        #[allow(unreachable_patterns)]
+        _ => Err("found unknown instruction"),
     }
 }
