@@ -83,9 +83,9 @@ mod tests {
         constants.insert(0, ScratchValue::Number(1.0));
         let instructions = unsafe {
             transmute_instructions(&[
-                0x0002000000000000u64,
-                0x0002000000000000u64,
-                0x0008000000000000u64,
+                0x0000000000000002u64, // LOAD_CONST 0
+                0x0000000000000002u64, // LOAD_CONST 0
+                0x0000000000000008u64, // OP_ADD
             ])
         };
         let mut program_counter = 0;

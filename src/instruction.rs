@@ -2,7 +2,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[repr(u16)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InstructionType {
     Noop = 0x0000,
     ExtraArg = 0x0001,
@@ -64,6 +64,7 @@ pub enum ReturnReason {
 
 #[wasm_bindgen]
 #[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Instruction {
     pub name: InstructionType,
     _padding: [u8; 2],
