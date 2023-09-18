@@ -1,13 +1,14 @@
 mod execute_instruction;
 mod instruction;
+mod runner;
 mod scratch_value;
 mod utils;
 
 use std::{collections::HashMap, convert::TryInto};
 
-use execute_instruction::execute_instruction;
-use instruction::{Instruction, InstructionType};
+use instruction::Instruction;
 use js_sys::Array;
+use runner::run_instructions;
 use scratch_value::ScratchValue;
 use utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
@@ -27,8 +28,13 @@ const TS_DECLARATION: &'static str = r#"
 export type VariableStore = Map<number, string | number | boolean>; 
 "#;
 
+unsafe fn transmute_instructions(bytecode: &[u64]) -> &[Instruction] {
+    std::mem::transmute::<&[u64], &[Instruction]>(bytecode)
+}
+
 /// For lists, they are passed as strings with the null character as the list
 /// item separator
+/// This function is the "glue" binding the real logic in runner.rs to JS
 #[wasm_bindgen]
 pub fn run_sync(
     initial_program_counter: usize,
@@ -38,8 +44,10 @@ pub fn run_sync(
     variables: &js_sys::Map,
     lists: &js_sys::Map,
 ) -> Result<js_sys::Map, JsValue> {
+    // Set the panic hook (remove if too slow? maybe just call init() from js?)
+    set_panic_hook();
     // Load the instructions unsafely
-    let instructions = unsafe { std::mem::transmute::<&[u64], &[Instruction]>(bytecode) };
+    let instructions = unsafe { transmute_instructions(bytecode) };
     // Set up the stack
     let mut stack: Vec<ScratchValue> = Vec::with_capacity(initial_stack.len());
     for stack_item in initial_stack {
@@ -82,44 +90,15 @@ pub fn run_sync(
         }
         list_map.insert(key?.as_f64().ok_or("Failed to read key")? as u32, items);
     }
-    // Execute the program
     let mut program_counter = initial_program_counter;
-    let mut early_return = None;
-    while early_return.is_none() && program_counter < instructions.len() {
-        let instruction = &instructions[program_counter];
-        execute_instruction(
-            instruction,
-            &mut stack,
-            &mut constant_map,
-            &mut variable_map,
-            &mut list_map,
-            &mut |new_program_counter| {
-                program_counter = if let Some(pc) = new_program_counter {
-                    pc
-                } else {
-                    program_counter + 1
-                };
-                #[cfg(safety_checks)]
-                if program_counter > instructions.len() {
-                    console::warn_1(JsValue::from_str("new counter too large"));
-                    return None;
-                }
-                let instruction = &instructions[program_counter];
-                match instruction {
-                    Instruction {
-                        name: InstructionType::ExtraArg,
-                        argument,
-                        ..
-                    } => Some(*argument),
-                    _ => None,
-                }
-            },
-            &mut |argument| {
-                early_return = Some(argument);
-            },
-        )?;
-        program_counter += 1;
-    }
+    let return_reason = run_instructions(
+        &mut program_counter,
+        &mut stack,
+        instructions,
+        &constant_map,
+        &mut variable_map,
+        &mut list_map,
+    )?;
     // Load the variable store into a Map for the response
     let variables = js_sys::Map::new();
     for (k, v) in variable_map {
@@ -136,7 +115,7 @@ pub fn run_sync(
         &JsValue::from_str("_programCounter"),
         &JsValue::from_f64(program_counter as f64),
     );
-    if let Some(return_argument) = early_return {
+    if let Some(return_argument) = return_reason {
         variables.set(
             &JsValue::from_str("_returnReason"),
             &JsValue::from_f64(return_argument as f64),
