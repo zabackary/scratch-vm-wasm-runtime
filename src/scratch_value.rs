@@ -2,7 +2,7 @@ use std::{convert::TryFrom, ops};
 
 use wasm_bindgen::JsValue;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ScratchValue {
     /// Represented as 0/1 in the value
     Boolean(bool),
