@@ -7,7 +7,7 @@ mod utils;
 use std::{collections::HashMap, convert::TryInto};
 
 use instruction::Instruction;
-use js_sys::Array;
+use js_sys::{Array, Reflect};
 use runner::run_instructions;
 use scratch_value::ScratchValue;
 use utils::set_panic_hook;
@@ -43,8 +43,9 @@ pub fn run_sync(
     constants: &js_sys::Map,
     variables: &js_sys::Map,
     lists: &js_sys::Map,
-) -> Result<js_sys::Map, JsValue> {
+) -> Result<js_sys::Object, JsValue> {
     // Set the panic hook (remove if too slow? maybe just call init() from js?)
+    // In theory it no-ops if already set
     set_panic_hook();
     // Load the instructions unsafely
     let instructions = unsafe { transmute_instructions(bytecode) };
@@ -100,26 +101,43 @@ pub fn run_sync(
         &mut list_map,
     )?;
     // Load the variable store into a Map for the response
+    let response = js_sys::Object::new();
     let variables = js_sys::Map::new();
     for (k, v) in variable_map {
         variables.set(&JsValue::from_f64(k as f64), &v.into());
     }
-    variables.set(
-        &JsValue::from_str("_stack"),
-        &stack
-            .iter()
-            .map(|item| Into::<JsValue>::into(item.clone()))
-            .collect::<Array>(),
-    );
-    variables.set(
-        &JsValue::from_str("_programCounter"),
-        &JsValue::from_f64(program_counter as f64),
-    );
-    if let Some(return_argument) = return_reason {
-        variables.set(
-            &JsValue::from_str("_returnReason"),
-            &JsValue::from_f64(return_argument as f64),
+    Reflect::set(&response, &JsValue::from_str("variables"), &variables)?;
+    let lists = js_sys::Map::new();
+    for (k, v) in list_map {
+        lists.set(
+            &JsValue::from_f64(k as f64),
+            &v.into_iter()
+                .map(|item| Into::<String>::into(item))
+                .collect::<Vec<_>>()
+                .join("\0")
+                .into(),
         );
     }
-    Ok(variables)
+    Reflect::set(&response, &JsValue::from_str("lists"), &lists)?;
+    Reflect::set(
+        &response,
+        &JsValue::from_str("stack"),
+        &stack
+            .into_iter()
+            .map(|item| Into::<JsValue>::into(item))
+            .collect::<Array>(),
+    )?;
+    Reflect::set(
+        &response,
+        &JsValue::from_str("programCounter"),
+        &JsValue::from_f64(program_counter as f64),
+    )?;
+    if let Some(return_argument) = return_reason {
+        Reflect::set(
+            &response,
+            &JsValue::from_str("returnReason"),
+            &JsValue::from_f64(return_argument as f64),
+        )?;
+    }
+    Ok(response)
 }
