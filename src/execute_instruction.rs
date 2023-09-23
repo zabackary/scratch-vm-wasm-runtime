@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::console;
 
@@ -327,6 +328,100 @@ where
         InstructionType::MonitorHideList => todo!(),
         InstructionType::Return => {
             return_control(instruction.argument);
+            Ok(())
+        }
+        InstructionType::OpMod => {
+            let lhs = pop_stack(stack)?;
+            let rhs = pop_stack(stack)?;
+            stack.push(lhs % rhs);
+            Ok(())
+        }
+        InstructionType::StringIndexChar => {
+            let index = Into::<f64>::into(pop_stack(stack)?);
+            let string = Into::<String>::into(pop_stack(stack)?);
+            stack.push(
+                if index % 1.0 == 0.0 && index > 0.0 && (index as usize) <= string.len() {
+                    ScratchValue::String(string[(index as usize - 1)..(index as usize)].to_string())
+                } else {
+                    ScratchValue::EMPTY
+                },
+            );
+            Ok(())
+        }
+        InstructionType::StringLen => {
+            let string = Into::<String>::into(pop_stack(stack)?);
+            stack.push(ScratchValue::Number(string.len() as f64));
+            Ok(())
+        }
+        InstructionType::StringConcat => {
+            let rhs = Into::<String>::into(pop_stack(stack)?);
+            let mut lhs = Into::<String>::into(pop_stack(stack)?);
+            lhs.push_str(&rhs);
+            stack.push(ScratchValue::String(lhs));
+            Ok(())
+        }
+        InstructionType::UnaryRound => {
+            let op = Into::<f64>::into(pop_stack(stack)?);
+            stack.push(ScratchValue::Number(op.round()));
+            Ok(())
+        }
+        InstructionType::DataRand => {
+            if !cfg!(target_arch = "wasm32") {
+                return Err("cannot generate random numbers if not on WASM");
+            }
+
+            let max = pop_stack(stack)?;
+            let min = pop_stack(stack)?;
+            let fractional_part = if let ScratchValue::String(ref str) = max {
+                str.contains('.')
+            } else {
+                false
+            } || if let ScratchValue::String(ref str) = min {
+                str.contains('.')
+            } else {
+                false
+            };
+            let num_min = Into::<f64>::into(min);
+            let num_max = Into::<f64>::into(max);
+            let rand = js_sys::Math::random();
+            stack.push(ScratchValue::Number(if fractional_part {
+                (rand * (num_max - num_min)) + num_min
+            } else {
+                num_min + (rand * ((num_max + 1.0) - num_min)).floor()
+            }));
+            Ok(())
+        }
+        InstructionType::DataDate => {
+            stack.push(ScratchValue::Number(Local::now().day() as f64));
+            Ok(())
+        }
+        InstructionType::DataWeekday => {
+            stack.push(ScratchValue::Number(
+                Local::now().weekday().number_from_monday() as f64,
+            ));
+            Ok(())
+        }
+        InstructionType::DataDaysSince2000 => {
+            stack.push(ScratchValue::Number(
+                (Local::now().timestamp_millis() as f64 - 946684800000.0)
+                    / (24.0 * 60.0 * 60.0 * 1000.0),
+            ));
+            Ok(())
+        }
+        InstructionType::DataHour => {
+            stack.push(ScratchValue::Number(Local::now().hour() as f64));
+            Ok(())
+        }
+        InstructionType::DataMinute => {
+            stack.push(ScratchValue::Number(Local::now().minute() as f64));
+            Ok(())
+        }
+        InstructionType::DataMonth => {
+            stack.push(ScratchValue::Number(Local::now().month() as f64));
+            Ok(())
+        }
+        InstructionType::DataSecond => {
+            stack.push(ScratchValue::Number(Local::now().second() as f64));
             Ok(())
         }
         #[allow(unreachable_patterns)]

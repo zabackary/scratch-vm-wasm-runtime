@@ -105,6 +105,13 @@ impl ops::Div for ScratchValue {
     }
 }
 
+impl ops::Rem for ScratchValue {
+    type Output = ScratchValue;
+    fn rem(self, rhs: ScratchValue) -> Self::Output {
+        Self::Number(Into::<f64>::into(self) % Into::<f64>::into(rhs))
+    }
+}
+
 impl ops::BitAnd for ScratchValue {
     type Output = ScratchValue;
     fn bitand(self, rhs: Self) -> Self::Output {
