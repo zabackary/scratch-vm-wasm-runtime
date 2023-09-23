@@ -372,15 +372,7 @@ where
 
             let max = pop_stack(stack)?;
             let min = pop_stack(stack)?;
-            let fractional_part = if let ScratchValue::String(ref str) = max {
-                str.contains('.')
-            } else {
-                false
-            } || if let ScratchValue::String(ref str) = min {
-                str.contains('.')
-            } else {
-                false
-            };
+            let fractional_part = instruction.argument > 0;
             let num_min = Into::<f64>::into(min);
             let num_max = Into::<f64>::into(max);
             let rand = js_sys::Math::random();
@@ -422,6 +414,10 @@ where
         }
         InstructionType::DataSecond => {
             stack.push(ScratchValue::Number(Local::now().second() as f64));
+            Ok(())
+        }
+        InstructionType::DataYear => {
+            stack.push(ScratchValue::Number(Local::now().year() as f64));
             Ok(())
         }
         #[allow(unreachable_patterns)]

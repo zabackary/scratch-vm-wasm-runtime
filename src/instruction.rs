@@ -63,6 +63,7 @@ pub enum InstructionType {
     DataMinute = 0x0038,
     DataMonth = 0x0039,
     DataSecond = 0x003a,
+    DataYear = 0x003b,
 }
 
 #[wasm_bindgen]
