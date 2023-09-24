@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
 use chrono::prelude::*;
-use wasm_bindgen::JsValue;
-use web_sys::console;
 
 use crate::{
     instruction::{Instruction, InstructionType},
