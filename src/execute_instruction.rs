@@ -38,6 +38,8 @@ where
         InstructionType::Noop => Ok(()),
         InstructionType::ExtraArg => Err("Found ExtraArg where none was required"),
         InstructionType::LoadConst => {
+            // Load a constant from the constant_map, falling back on an empty
+            // string, and push it to the stack.
             stack.push(
                 constant_map
                     .get(&instruction.argument)
@@ -47,6 +49,7 @@ where
             Ok(())
         }
         InstructionType::Load => {
+            // Load a variable with the same schematics as above.
             stack.push(
                 variable_map
                     .get(&instruction.argument)
@@ -56,6 +59,7 @@ where
             Ok(())
         }
         InstructionType::Store => {
+            // Pop the top of the stack and store it, falling back on ""
             variable_map.insert(
                 instruction.argument,
                 stack.pop().unwrap_or_else(|| ScratchValue::EMPTY),
@@ -63,23 +67,30 @@ where
             Ok(())
         }
         InstructionType::Jump => {
+            // Jump by the argument
             jmp_consume_extra_arg(instruction.argument as usize);
             Ok(())
         }
         InstructionType::JumpIf => {
-            if stack.pop().unwrap_or_else(|| ScratchValue::EMPTY).into() {
+            // Jump by the argument if the top of the stack is truthful
+            if pop_stack(stack)?.into() {
                 jmp_consume_extra_arg(instruction.argument as usize);
             }
             Ok(())
         }
         InstructionType::AllocList => {
+            // Get the list from the map
             let list = list_map.get_mut(&instruction.argument);
+            // Load the extra argument
             let additional_elements =
                 jmp_consume_extra_arg(1).ok_or("ALLOC_LIST missing extra arg")?;
+            // Check if allocation is too big, but only if safety_checks is
+            // enabled
             #[cfg(feature = "safety_checks")]
             if additional_elements > 200_000 {
                 return Err("allocation exceeds list limit");
             }
+            // Unwrap the list and fail silently
             if let Some(list) = list {
                 // Attempt to allocate the vector, but if not possible, then
                 // ignore the error
