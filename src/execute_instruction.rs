@@ -31,7 +31,7 @@ pub fn execute_instruction<F, G>(
     return_control: &mut G,
 ) -> Result<(), &'static str>
 where
-    F: FnMut(Option<usize>) -> Option<u32>,
+    F: FnMut(usize) -> Option<u32>,
     G: FnMut(u32) -> (),
 {
     match &instruction.name {
@@ -63,22 +63,21 @@ where
             Ok(())
         }
         InstructionType::Jump => {
-            jmp_consume_extra_arg(Some(instruction.argument as usize));
+            jmp_consume_extra_arg(instruction.argument as usize);
             Ok(())
         }
         InstructionType::JumpIf => {
             if stack.pop().unwrap_or_else(|| ScratchValue::EMPTY).into() {
-                jmp_consume_extra_arg(Some(instruction.argument as usize));
+                jmp_consume_extra_arg(instruction.argument as usize);
             }
             Ok(())
         }
         InstructionType::AllocList => {
             let list = list_map.get_mut(&instruction.argument);
             let additional_elements =
-                jmp_consume_extra_arg(None).ok_or("ALLOC_LIST missing extra arg")?;
+                jmp_consume_extra_arg(1).ok_or("ALLOC_LIST missing extra arg")?;
             #[cfg(feature = "safety_checks")]
             if additional_elements > 200_000 {
-                console::warn_1(&JsValue::from_str("can't allocate that much"));
                 return Err("allocation exceeds list limit");
             }
             if let Some(list) = list {

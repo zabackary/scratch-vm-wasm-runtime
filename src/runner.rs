@@ -23,12 +23,8 @@ pub fn run_instructions(
             constants,
             variables,
             lists,
-            &mut |new_program_counter| {
-                *program_counter = if let Some(pc) = new_program_counter {
-                    pc
-                } else {
-                    *program_counter + 1
-                };
+            &mut |offset| {
+                *program_counter = *program_counter + offset;
                 #[cfg(safety_checks)]
                 if program_counter > instructions.len() {
                     console::warn_1(JsValue::from_str("new counter too large"));
