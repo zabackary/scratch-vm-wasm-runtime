@@ -17,7 +17,7 @@ pub fn run_instructions(
     let mut early_return = None;
     while early_return.is_none() && *program_counter < instructions.len() {
         let instruction = &instructions[*program_counter];
-        execute_instruction(
+        let result = execute_instruction(
             instruction,
             stack,
             constants,
@@ -43,7 +43,13 @@ pub fn run_instructions(
             &mut |argument| {
                 early_return = Some(argument);
             },
-        )?;
+        );
+        if let Err(res_err) = result {
+            return Err(JsValue::from_str(&format!(
+                "Instruction failed to execute (@{}): {} (stack = {:?})",
+                *program_counter, res_err, stack
+            )));
+        }
         *program_counter += 1;
     }
     Ok(early_return)
