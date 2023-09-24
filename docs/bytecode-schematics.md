@@ -70,8 +70,8 @@ Bytecode:
 | `LOAD_CONST`         | `0x0002` | Loads the constant specified in the argument to the top of the stack.                                                                              |
 | `LOAD`               | `0x0003` | Loads the Scratch variable specified to the top of the stack.                                                                                      |
 | `STORE`              | `0x0004` | Writes the value on the top of the stack to the specified slot[^2] and pops it.                                                                    |
-| `JUMP`               | `0x0005` | Jumps by the offset specified by the argument (relative).                                                                                          |
-| `JUMP_IF`            | `0x0006` | Jumps by the offset specified by the argument (relative), but only if the value at the top of the stack can be coerced to a boolean `true`         |
+| `JUMP`               | `0x0005` | Jumps by the offset specified by the argument[^5] (relative).                                                                                      |
+| `JUMP_IF`            | `0x0006` | Jumps by the offset specified by the argument[^5] (relative), but only if the value at the top of the stack can be coerced to a boolean `true`     |
 | `ALLOC_LIST`         | `0x0007` | Allocates the amount of elements specified by an `EXTRA_ARG` immediately following the instruction for the list specified by the argument.         |
 | `OP_ADD`             | `0x0008` | Pops and adds the top two elements of the stack then puts the result.                                                                              |
 | `OP_SUBTRACT`        | `0x0009` | Pops and subtracts the first element of the stack from the second of the stack then puts the result.                                               |
@@ -132,6 +132,7 @@ Bytecode:
 
 [^3]: In degrees, sadly.
 [^4]: Indexes in Scratch are one-based.
+[^5]: The argument for `JUMP` and `JUMP_IF` is a `i32`, not the standard `u32`.
 
 ## Variable schematics
 

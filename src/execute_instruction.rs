@@ -29,7 +29,7 @@ pub fn execute_instruction<F, G>(
     return_control: &mut G,
 ) -> Result<(), &'static str>
 where
-    F: FnMut(usize) -> Option<u32>,
+    F: FnMut(isize) -> Option<u32>,
     G: FnMut(u32) -> (),
 {
     match &instruction.name {
@@ -65,14 +65,19 @@ where
             Ok(())
         }
         InstructionType::Jump => {
-            // Jump by the argument
-            jmp_consume_extra_arg(instruction.argument as usize);
+            // Jump by the argument, which is a i32, so we need to reinterpret
+            // it as so using unsafe Rust.
+            let offset = unsafe { std::mem::transmute::<u32, i32>(instruction.argument) };
+            jmp_consume_extra_arg(offset as isize);
             Ok(())
         }
         InstructionType::JumpIf => {
             // Jump by the argument if the top of the stack is truthful
+            // Need same unsafe code as above, since the argument can be
+            // negative
             if pop_stack(stack)?.into() {
-                jmp_consume_extra_arg(instruction.argument as usize);
+                let offset = unsafe { std::mem::transmute::<u32, i32>(instruction.argument) };
+                jmp_consume_extra_arg(offset as isize);
             }
             Ok(())
         }

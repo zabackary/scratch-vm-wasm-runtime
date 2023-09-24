@@ -24,7 +24,7 @@ pub fn run_instructions(
             variables,
             lists,
             &mut |offset| {
-                *program_counter = *program_counter + offset;
+                *program_counter = program_counter.saturating_add_signed(offset);
                 #[cfg(safety_checks)]
                 if program_counter > instructions.len() {
                     console::warn_1(JsValue::from_str("new counter too large"));
