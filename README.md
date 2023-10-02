@@ -2,7 +2,7 @@
 
 > Basically just a loop that runs bytecode instructions.
 
-For an explainer, please see [./docs/bytecode-schematics](this documentation), which explains the format of the bytecode.
+For an explainer, please see [this documentation](./docs/bytecode-schematics), which explains the format of the bytecode.
 
 Code outline:
 
