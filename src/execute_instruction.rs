@@ -46,6 +46,25 @@ where
             );
             Ok(())
         }
+        InstructionType::LoadConstInt => {
+            stack.push(
+                ScratchValue::Number(
+                    unsafe { std::mem::transmute::<_, i32>(instruction.argument) }.into(),
+                )
+                .into(),
+            );
+            Ok(())
+        }
+        InstructionType::LoadConstFloat => {
+            stack.push(ScratchValue::Number(unsafe {
+                std::mem::transmute::<_, f32>(instruction.argument)
+            } as f64));
+            Ok(())
+        }
+        InstructionType::LoadConstBool => {
+            stack.push(ScratchValue::Boolean(instruction.argument > 0));
+            Ok(())
+        }
         InstructionType::Load => {
             // Load a variable with the same schematics as above.
             stack.push(
@@ -67,7 +86,7 @@ where
         InstructionType::Jump => {
             // Jump by the argument, which is a i32, so we need to reinterpret
             // it as so using unsafe Rust.
-            let offset = unsafe { std::mem::transmute::<u32, i32>(instruction.argument) };
+            let offset = unsafe { std::mem::transmute::<_, i32>(instruction.argument) };
             jmp_consume_extra_arg(offset as isize);
             Ok(())
         }
@@ -76,7 +95,7 @@ where
             // Need same unsafe code as above, since the argument can be
             // negative
             if pop_stack(stack)?.into() {
-                let offset = unsafe { std::mem::transmute::<u32, i32>(instruction.argument) };
+                let offset = unsafe { std::mem::transmute::<_, i32>(instruction.argument) };
                 jmp_consume_extra_arg(offset as isize);
             }
             Ok(())

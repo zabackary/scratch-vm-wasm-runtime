@@ -50,7 +50,7 @@ pub enum InstructionType {
     MonitorShowList = 0x002b,
     MonitorHideList = 0x002c,
     Return = 0x002d,
-    OpMod = 0x003e,
+    OpMod = 0x002e,
     StringIndexChar = 0x002f,
     StringLen = 0x0030,
     StringConcat = 0x0031,
@@ -64,6 +64,9 @@ pub enum InstructionType {
     DataMonth = 0x0039,
     DataSecond = 0x003a,
     DataYear = 0x003b,
+    LoadConstInt = 0x003c,
+    LoadConstBool = 0x003d,
+    LoadConstFloat = 0x003e,
 }
 
 #[wasm_bindgen]

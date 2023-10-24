@@ -95,7 +95,7 @@ Bytecode:
 | `UNARY_EPOW`         | `0x001b` | Pops and raises _e_ to the power of `TOS` and pushes it.                                                                                           |
 | `UNARY_10POW`        | `0x001c` | Pops and takes 10 to the power of `TOS` and pushes it.                                                                                             |
 | `OP_LT`              | `0x001d` | Implements `TOS = TOS1 < TOS2` while popping the first two elements of the stack.                                                                  |
-| _reserved_           | `0x001e` | _Note: should there be `OP_GT`? The compiler can just reverse the operands._                                                                       |
+| _reserved_           | `0x001e` | _Note: should there be `OP_GT`? The compiler can just reverse the operands. Side effects?_                                                         |
 | `OP_EQ`              | `0x001f` | Implements `TOS = TOS === TOS2` while popping the first two elements of the stack.                                                                 |
 | `LIST_DEL`           | `0x0020` | Deletes, from the list identified by the argument, the `TOS`th element.                                                                            |
 | `LIST_INS`           | `0x0021` | Inserts the `TOS` after the index `TOS2`[^4] in the list given by the argument. Pops both.                                                         |
@@ -125,6 +125,9 @@ Bytecode:
 | `DATA_MONTH`         | `0x0039` | Gets the month.                                                                                                                                    |
 | `DATA_SECOND`        | `0x003a` | Gets the second.                                                                                                                                   |
 | `DATA_YEAR`          | `0x003b` | Gets the year.                                                                                                                                     |
+| `LOAD_CONST_INT`     | `0x003c` | Loads the integer (an i32, not the standard u32) from the argument onto the stack.                                                                 |
+| `LOAD_CONST_BOOL`    | `0x003d` | Loads the boolean (>1 = true, 0 = false) from the argument onto the stack.                                                                         |
+| `LOAD_CONST_FLOAT`   | `0x003e` | Loads the float (an f32, not the standard u32) from the argument onto the stack.                                                                   |
 
 [^2]:
     This should also mark the variable as changed so `scratch-gui` can update
