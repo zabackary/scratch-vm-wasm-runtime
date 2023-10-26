@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{convert::TryInto, ops::IndexMut};
 
 use chrono::prelude::*;
 
@@ -6,6 +6,20 @@ use crate::{
     instruction::{Instruction, InstructionType},
     scratch_value::ScratchValue,
 };
+
+/// Check an index against an array and see if it is out of bounds, but only
+/// when the compiler option is enabled.
+#[inline(always)]
+fn bounds_check<T, I>(vec: &Vec<T>, idx: I) -> Result<(), &'static str>
+where
+    I: TryInto<usize>,
+{
+    #[cfg(feature = "safety_checks")]
+    if idx.try_into().map_err(|_| "can't convert index")? >= vec.len() {
+        return Err("index out of bounds");
+    }
+    return Ok(());
+}
 
 #[inline]
 fn pop_stack(stack: &mut Vec<ScratchValue>) -> Result<ScratchValue, &'static str> {
@@ -19,12 +33,19 @@ fn scratch_find(list: &Vec<ScratchValue>, term: &str) -> usize {
         .map_or(0, |a| a + 1)
 }
 
+/// Executes the instruction given by the argument, along with the stack,
+/// constants, etc.
+///
+/// # Panics
+///
+/// Panics if the ID for a constant/variable/list is out of bounds. The compiler
+/// should know better than that.
 pub fn execute_instruction<F, G>(
     instruction: &Instruction,
     stack: &mut Vec<ScratchValue>,
-    constant_map: &HashMap<u32, ScratchValue>,
-    variable_map: &mut HashMap<u32, ScratchValue>,
-    list_map: &mut HashMap<u32, Vec<ScratchValue>>,
+    constants: &Vec<ScratchValue>,
+    variables: &mut Vec<ScratchValue>,
+    lists: &mut Vec<Vec<ScratchValue>>,
     jmp_consume_extra_arg: &mut F,
     return_control: &mut G,
 ) -> Result<(), &'static str>
@@ -36,14 +57,11 @@ where
         InstructionType::Noop => Ok(()),
         InstructionType::ExtraArg => Err("Found ExtraArg where none was required"),
         InstructionType::LoadConst => {
-            // Load a constant from the constant_map, falling back on an empty
+            // Load a constant from the constants, falling back on an empty
             // string, and push it to the stack.
-            stack.push(
-                constant_map
-                    .get(&instruction.argument)
-                    .unwrap_or_else(|| ScratchValue::EMPTY_REF)
-                    .clone(),
-            );
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&constants, instruction.argument)?;
+            stack.push(constants[instruction.argument as usize].clone());
             Ok(())
         }
         InstructionType::LoadConstInt => {
@@ -67,20 +85,16 @@ where
         }
         InstructionType::Load => {
             // Load a variable with the same schematics as above.
-            stack.push(
-                variable_map
-                    .get(&instruction.argument)
-                    .unwrap_or_else(|| ScratchValue::EMPTY_REF)
-                    .clone(),
-            );
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&variables, instruction.argument)?;
+            stack.push(variables[instruction.argument as usize].clone());
             Ok(())
         }
         InstructionType::Store => {
-            // Pop the top of the stack and store it, falling back on ""
-            variable_map.insert(
-                instruction.argument,
-                stack.pop().unwrap_or_else(|| ScratchValue::EMPTY),
-            );
+            // Pop the top of the stack and store it
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&variables, instruction.argument)?;
+            variables[instruction.argument as usize] = pop_stack(stack)?;
             Ok(())
         }
         InstructionType::Jump => {
@@ -102,7 +116,9 @@ where
         }
         InstructionType::AllocList => {
             // Get the list from the map
-            let list = list_map.get_mut(&instruction.argument);
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             // Load the extra argument
             let additional_elements =
                 jmp_consume_extra_arg(1).ok_or("ALLOC_LIST missing extra arg")?;
@@ -112,12 +128,9 @@ where
             if additional_elements > 200_000 {
                 return Err("allocation exceeds list limit");
             }
-            // Unwrap the list and fail silently
-            if let Some(list) = list {
-                // Attempt to allocate the vector, but if not possible, then
-                // ignore the error
-                let _ = list.try_reserve(additional_elements as usize);
-            }
+            // Attempt to allocate the vector, but if not possible, then
+            // ignore the error
+            let _ = list.try_reserve(additional_elements as usize);
             Ok(())
         }
         InstructionType::OpAdd => {
@@ -269,9 +282,9 @@ where
             Ok(())
         }
         InstructionType::ListDel => {
-            let list = list_map
-                .get_mut(&instruction.argument)
-                .ok_or("failed to find list")?;
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
             if index < list.len() {
                 // If the index is out of bounds, no-op just like Scratch does
@@ -280,9 +293,9 @@ where
             Ok(())
         }
         InstructionType::ListIns => {
-            let list = list_map
-                .get_mut(&instruction.argument)
-                .ok_or("failed to find list")?;
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             let element = pop_stack(stack)?;
             let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
             if index <= list.len() {
@@ -292,17 +305,17 @@ where
             Ok(())
         }
         InstructionType::ListDelAll => {
-            let list = list_map
-                .get_mut(&instruction.argument)
-                .ok_or("failed to find list")?;
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             list.clear();
             // TODO: Deallocate vector? How?
             Ok(())
         }
         InstructionType::ListReplace => {
-            let list = list_map
-                .get_mut(&instruction.argument)
-                .ok_or("failed to find list")?;
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             let element = pop_stack(stack)?;
             let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
             if index < list.len() {
@@ -312,16 +325,17 @@ where
             Ok(())
         }
         InstructionType::ListPush => {
-            let list = list_map
-                .get_mut(&instruction.argument)
-                .ok_or("failed to find list")?;
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            let list = lists.index_mut(instruction.argument as usize);
             let element = pop_stack(stack)?;
             list.push(element);
             Ok(())
         }
         InstructionType::ListLoad => {
-            let list = list_map
-                .get_mut(&instruction.argument)
+            // no safety check because `get` does it for us
+            let list = lists
+                .get(instruction.argument as usize)
                 .ok_or("failed to find list")?;
             let index = Into::<f64>::into(pop_stack(stack)?) as usize - 1;
             stack.push(if index < list.len() {
@@ -332,26 +346,29 @@ where
             Ok(())
         }
         InstructionType::ListLen => {
-            let list = list_map
-                .get(&instruction.argument)
-                .ok_or("failed to find list")?;
-            stack.push(ScratchValue::Number(list.len() as f64));
+            #[cfg(feature = "safety_checks")]
+            bounds_check(&lists, instruction.argument)?;
+            stack.push(ScratchValue::Number(
+                lists[instruction.argument as usize].len() as f64,
+            ));
             Ok(())
         }
         InstructionType::ListIFind => {
-            let list = list_map
-                .get(&instruction.argument)
+            // no safety check because `get` does it for us
+            let list = lists
+                .get(instruction.argument as usize)
                 .ok_or("failed to find list")?;
             let term: String = pop_stack(stack)?.into();
-            stack.push(ScratchValue::Number(scratch_find(list, &term) as f64));
+            stack.push(ScratchValue::Number(scratch_find(&list, &term) as f64));
             Ok(())
         }
         InstructionType::ListIIncludes => {
-            let list = list_map
-                .get(&instruction.argument)
+            // no safety check because `get` does it for us
+            let list = lists
+                .get(instruction.argument as usize)
                 .ok_or("failed to find list")?;
             let term: String = pop_stack(stack)?.into();
-            stack.push(ScratchValue::Boolean(scratch_find(list, &term) > 0));
+            stack.push(ScratchValue::Boolean(scratch_find(&list, &term) > 0));
             Ok(())
         }
         InstructionType::MonitorShowVar => todo!(),

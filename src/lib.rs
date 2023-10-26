@@ -4,7 +4,7 @@ mod runner;
 mod scratch_value;
 mod utils;
 
-use std::{collections::HashMap, convert::TryInto};
+use std::convert::TryInto;
 
 use instruction::Instruction;
 use js_sys::{Array, Reflect};
@@ -40,9 +40,9 @@ pub fn run_sync(
     initial_program_counter: usize,
     initial_stack: Vec<JsValue>,
     bytecode: &[u64],
-    constants: &js_sys::Map,
-    variables: &js_sys::Map,
-    lists: &js_sys::Map,
+    constants_vec: Vec<JsValue>,
+    variables_vec: Vec<JsValue>,
+    lists_vec: Vec<JsValue>,
 ) -> Result<js_sys::Object, JsValue> {
     // Set the panic hook (remove if too slow? maybe just call init() from js?)
     // In theory it no-ops if already set
@@ -55,28 +55,19 @@ pub fn run_sync(
         stack.push(stack_item.try_into()?);
     }
     // Load the constants from the map
-    let mut constant_map = HashMap::<u32, ScratchValue>::new();
-    for key in constants.keys() {
-        constant_map.insert(
-            key.clone()?.as_f64().ok_or("Failed to read key")? as u32,
-            constants.get(&key?).try_into()?,
-        );
+    let mut constants: Vec<ScratchValue> = Vec::with_capacity(constants_vec.len());
+    for constant in constants_vec {
+        constants.push(constant.try_into()?);
     }
     // Load the variables from the map
-    let mut variable_map = HashMap::<u32, ScratchValue>::new();
-    for key in variables.keys() {
-        variable_map.insert(
-            key.clone()?.as_f64().ok_or("Failed to read key")? as u32,
-            variables.get(&key?).try_into()?,
-        );
+    let mut variables: Vec<ScratchValue> = Vec::with_capacity(variables_vec.len());
+    for variable in variables_vec {
+        variables.push(variable.try_into()?);
     }
     // Load the lists from the map
-    let mut list_map = HashMap::<u32, Vec<ScratchValue>>::new();
-    for key in lists.keys() {
-        let list_contents = lists
-            .get(&key.clone()?)
-            .as_string()
-            .ok_or("Failed to parse list")?;
+    let mut lists: Vec<Vec<ScratchValue>> = Vec::with_capacity(lists_vec.len());
+    for list in lists_vec {
+        let list_contents = list.as_string().ok_or("failed to parse list")?;
         // Create a new Vec for the list items, avoiding many allocations only
         // if the length of the concatenated contents is greater than 1000,
         // when the cost of allocating a lot may exceed the cost of counting.
@@ -89,36 +80,43 @@ pub fn run_sync(
         for list_item in list_contents.split("\0") {
             items.push(list_item.to_owned().into());
         }
-        list_map.insert(key?.as_f64().ok_or("Failed to read key")? as u32, items);
+        lists.push(items);
     }
+
     let mut program_counter = initial_program_counter;
     let return_reason = run_instructions(
         &mut program_counter,
         &mut stack,
         instructions,
-        &constant_map,
-        &mut variable_map,
-        &mut list_map,
+        &constants,
+        &mut variables,
+        &mut lists,
     )?;
     // Load the variable store into a Map for the response
     let response = js_sys::Object::new();
-    let variables = js_sys::Map::new();
-    for (k, v) in variable_map {
-        variables.set(&JsValue::from_f64(k as f64), &v.into());
-    }
-    Reflect::set(&response, &JsValue::from_str("variables"), &variables)?;
-    let lists = js_sys::Map::new();
-    for (k, v) in list_map {
-        lists.set(
-            &JsValue::from_f64(k as f64),
-            &v.into_iter()
-                .map(|item| Into::<String>::into(item))
-                .collect::<Vec<_>>()
-                .join("\0")
-                .into(),
-        );
-    }
-    Reflect::set(&response, &JsValue::from_str("lists"), &lists)?;
+    Reflect::set(
+        &response,
+        &JsValue::from_str("variables"),
+        &variables
+            .into_iter()
+            .map(|item| Into::<JsValue>::into(item))
+            .collect::<Array>(),
+    )?;
+    Reflect::set(
+        &response,
+        &JsValue::from_str("lists"),
+        &lists
+            .into_iter()
+            .map(|v| {
+                Into::<JsValue>::into(
+                    v.into_iter()
+                        .map(|item| Into::<String>::into(item))
+                        .collect::<Vec<_>>()
+                        .join("\0"),
+                )
+            })
+            .collect::<Array>(),
+    )?;
     Reflect::set(
         &response,
         &JsValue::from_str("stack"),
